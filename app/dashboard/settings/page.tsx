@@ -1,21 +1,13 @@
-'use client';
+"use client";
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
 
 export default function SettingsPage() {
-  const [company, setCompany] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    address: '',
-  });
-
-  const [invoice, setInvoice] = useState({
-    footerNote: '',
-    currency: 'NGN',
-  });
-
+  const { data: session, status } = useSession();
+  const [company, setCompany] = useState({ name: '', email: '', phone: '', address: '' });
+  const [invoice, setInvoice] = useState({ footerNote: '', currency: 'NGN' });
   const [theme, setTheme] = useState('system');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -24,17 +16,17 @@ export default function SettingsPage() {
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (newPassword && newPassword !== confirmPassword) {
       setSuccessMessage('❌ Passwords do not match.');
       return;
     }
-
-    // TODO: Send the settings to your API/database
-
     setSuccessMessage('✅ Settings updated successfully!');
     setTimeout(() => setSuccessMessage(''), 3000);
   };
+
+  if (status === 'loading') return <p>Loading...</p>;
+  if (!session) return <p className="text-red-500">You must be logged in to view settings.</p>;
+  if (session.user.role !== 'superAdmin') return <p className="text-red-500">Access denied. Only superAdmins can manage settings.</p>;
 
   return (
     <motion.div
@@ -46,8 +38,6 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold">Settings</h1>
 
       <form onSubmit={handleSave} className="space-y-10">
-
-        {/* Company Info */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Company Info</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -58,25 +48,12 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Invoice Preferences */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Invoice Preferences</h2>
-          <textarea
-            rows={3}
-            placeholder="Invoice footer note..."
-            value={invoice.footerNote}
-            onChange={(e) => setInvoice({ ...invoice, footerNote: e.target.value })}
-            className="textarea"
-          />
-          <input
-            disabled
-            type="text"
-            value="NGN - Nigerian Naira (₦)"
-            className="input mt-2 bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
-          />
+          <textarea rows={3} placeholder="Invoice footer note..." value={invoice.footerNote} onChange={(e) => setInvoice({ ...invoice, footerNote: e.target.value })} className="textarea" />
+          <input disabled type="text" value="NGN - Nigerian Naira (₦)" className="input mt-2 bg-gray-100 dark:bg-gray-700 cursor-not-allowed" />
         </section>
 
-        {/* Account Settings */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Change Password</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -85,7 +62,6 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* Theme Preference */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Theme Preference</h2>
           <select value={theme} onChange={(e) => setTheme(e.target.value)} className="input">
@@ -95,37 +71,23 @@ export default function SettingsPage() {
           </select>
         </section>
 
-        {/* Notifications */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Notification Settings</h2>
           <label className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              checked={notifications}
-              onChange={(e) => setNotifications(e.target.checked)}
-              className="h-4 w-4"
-            />
+            <input type="checkbox" checked={notifications} onChange={(e) => setNotifications(e.target.checked)} className="h-4 w-4" />
             <span>Receive email alerts for activity logs</span>
           </label>
         </section>
 
-        {/* Save Button */}
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 transition"
-        >
+        <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-md hover:bg-blue-700 transition">
           Save Settings
         </button>
 
-        {/* Success Message */}
         {successMessage && (
-          <p className="text-green-600 dark:text-green-400 text-sm mt-2">
-            {successMessage}
-          </p>
+          <p className="text-green-600 dark:text-green-400 text-sm mt-2">{successMessage}</p>
         )}
       </form>
 
-      {/* Role Management for Super Admins */}
       <div className="mt-10 border-t pt-6 border-gray-300 dark:border-gray-700">
         <h2 className="text-xl font-semibold mb-4">User Management (Super Admin Only)</h2>
         <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-2">
@@ -137,4 +99,5 @@ export default function SettingsPage() {
     </motion.div>
   );
 }
-
+// This page allows super admins to manage company settings, including company info, invoice preferences, password changes, theme settings, and notification preferences.
+// It also includes a section for user management, which is only visible to super admins.
