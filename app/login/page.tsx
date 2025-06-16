@@ -3,28 +3,32 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const router = useRouter();
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     const res = await signIn('credentials', {
       email,
       password,
       redirect: false,
+      callbackUrl: '/dashboard',
     });
 
-    if (res?.ok) {
-      router.push('/dashboard');
+    console.log('🔐 signIn result:', res);
+    setLoading(false);
+
+    if (res?.ok && res.url) {
+      window.location.href = res.url; // ✅ hard redirect guarantees it works
     } else {
-      setError('Invalid credentials');
+      setError('Invalid credentials. Please try again.');
     }
   };
 
@@ -60,9 +64,10 @@ export default function LoginPage() {
           {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition disabled:opacity-50"
           >
-            Sign In
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 

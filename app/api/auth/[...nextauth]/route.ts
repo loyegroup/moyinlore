@@ -18,41 +18,45 @@ const handler = NextAuth({
         if (!credentials || !credentials.email || !credentials.password) {
           throw new Error('Missing credentials');
         }
+
         const user = await User.findOne({ email: credentials.email });
-
         if (!user) throw new Error('No user found');
-        const isValid = await bcrypt.compare(credentials.password, user.password);
 
+        const isValid = await bcrypt.compare(credentials.password, user.password);
         if (!isValid) throw new Error('Invalid password');
 
         return {
-          id: user._id,
+          id: user._id.toString(), // ✅ convert to string
           email: user.email,
           role: user.role,
         };
       },
-     }),
+    }),
   ],
+  session: {
+    strategy: 'jwt',
+  },
   callbacks: {
-    async session({ session, token }) {
-      session.user.role = token.role;
-      session.user.id = token.sub ?? '';
-      return session;
-    },
     async jwt({ token, user }) {
       if (user) {
         token.role = user.role;
       }
       return token;
     },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.role = token.role;
+        session.user.id = token.sub ?? '';
+      }
+      return session;
+    },
   },
   pages: {
     signIn: '/login',
-  },
-  session: {
-    strategy: 'jwt',
   },
   secret: process.env.NEXTAUTH_SECRET,
 });
 
 export { handler as GET, handler as POST };
+// This code sets up NextAuth with a credentials provider for user authentication.
+// It connects to the database, checks user credentials, and manages JWT sessions.

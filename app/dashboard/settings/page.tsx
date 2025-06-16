@@ -14,12 +14,32 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const res = await fetch('/api/settings');
+      const data = await res.json();
+      if (data) {
+        setCompany(data.company || {});
+        setInvoice(data.invoice || {});
+        setTheme(data.theme || 'system');
+        setNotifications(data.notifications ?? true);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword && newPassword !== confirmPassword) {
       setSuccessMessage('❌ Passwords do not match.');
       return;
     }
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company, invoice, theme, notifications }),
+    });
+    const result = await res.json();
     setSuccessMessage('✅ Settings updated successfully!');
     setTimeout(() => setSuccessMessage(''), 3000);
   };
@@ -99,5 +119,5 @@ export default function SettingsPage() {
     </motion.div>
   );
 }
-// This page allows super admins to manage company settings, including company info, invoice preferences, password changes, theme settings, and notification preferences.
-// It also includes a section for user management, which is only visible to super admins.
+// This page allows super admins to manage application settings, including company info, invoice preferences, password changes, theme settings, and notification preferences.
+// It uses NextAuth for authentication and Framer Motion for animations.
