@@ -1,85 +1,75 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { motion } from "framer-motion";
-import Papa from "papaparse";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface LogEntry {
-  id: string;
+  _id: string;
   user: string;
   action: string;
-  timestamp: string;
-  type: "info" | "warning" | "error" | "success";
+  createdAt: string;
+  type: 'info' | 'warning' | 'error' | 'success';
 }
 
-const mockLogs: LogEntry[] = [
-  { id: "1", user: "admin@example.com", action: "Edited product 'Laptop'", timestamp: "2025-06-13T08:45:00Z", type: "info" },
-  { id: "2", user: "superadmin@example.com", action: "Deleted product 'Old Monitor'", timestamp: "2025-06-13T09:10:00Z", type: "warning" },
-  { id: "3", user: "admin@example.com", action: "Created invoice for 'Desk Chair'", timestamp: "2025-06-13T10:30:00Z", type: "success" },
-  { id: "4", user: "superadmin@example.com", action: "Failed to save product update", timestamp: "2025-06-13T11:00:00Z", type: "error" },
-];
-
 export default function ActivityLogPage() {
-  const { data: session, status } = useSession();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filterType, setFilterType] = useState<'all' | LogEntry['type']>('all');
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    setLogs(mockLogs);
+    const fetchLogs = async () => {
+      const res = await fetch('/api/activity');
+      const data = await res.json();
+      setLogs(data);
+    };
+    fetchLogs();
   }, []);
 
-  if (status === "loading") return <p>Loading...</p>;
-  if (!session) return <p className="text-red-500">You must be logged in to view activity logs.</p>;
-  if (session.user.role !== "superAdmin") return <p className="text-red-500">Access denied. Only superAdmins can view activity logs.</p>;
-
   const filteredLogs = logs.filter((log) => {
-    const matchesType = filterType === "all" || log.type === filterType;
+    const matchesType = filterType === 'all' || log.type === filterType;
     const matchesSearch =
       log.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.action.toLowerCase().includes(searchQuery.toLowerCase());
+
     return matchesType && matchesSearch;
   });
 
   const getTypeStyle = (type: LogEntry['type']) => {
     switch (type) {
-      case "info": return "text-blue-500";
-      case "warning": return "text-yellow-500";
-      case "error": return "text-red-500";
-      case "success": return "text-green-500";
-      default: return "text-gray-500";
+      case 'info':
+        return 'text-blue-500';
+      case 'warning':
+        return 'text-yellow-500';
+      case 'error':
+        return 'text-red-500';
+      case 'success':
+        return 'text-green-500';
+      default:
+        return 'text-gray-500';
     }
-  };
-
-  const handleExportCSV = () => {
-    const csv = Papa.unparse(filteredLogs.map(({ id, ...rest }) => rest));
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "activity_logs.csv";
-    link.click();
   };
 
   const handleExportPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(16);
-    doc.text("Activity Logs", 14, 20);
+    doc.text('Activity Logs', 14, 20);
+
     const tableData = filteredLogs.map((log) => [
-      log.timestamp,
+      new Date(log.createdAt).toLocaleString('en-NG'),
       log.user,
       log.action,
       log.type,
     ]);
+
     autoTable(doc, {
-      head: [["Date", "User", "Action", "Type"]],
+      head: [['Date', 'User', 'Action', 'Type']],
       body: tableData,
       startY: 30,
     });
-    doc.save("activity_logs.pdf");
+
+    doc.save('activity_logs.pdf');
   };
 
   return (
@@ -116,12 +106,6 @@ export default function ActivityLogPage() {
 
         <div className="flex gap-2">
           <button
-            onClick={handleExportCSV}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
-          >
-            Export CSV
-          </button>
-          <button
             onClick={handleExportPDF}
             className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 transition"
           >
@@ -136,7 +120,7 @@ export default function ActivityLogPage() {
         <div className="space-y-4">
           {filteredLogs.map((log) => (
             <div
-              key={log.id}
+              key={log._id}
               className="p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 shadow-sm"
             >
               <div className="flex justify-between items-center">
@@ -145,9 +129,9 @@ export default function ActivityLogPage() {
                   {log.action}
                 </p>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {new Date(log.timestamp).toLocaleString("en-NG", {
-                    dateStyle: "short",
-                    timeStyle: "short",
+                  {new Date(log.createdAt).toLocaleString('en-NG', {
+                    dateStyle: 'short',
+                    timeStyle: 'short',
                   })}
                 </span>
               </div>
@@ -161,3 +145,5 @@ export default function ActivityLogPage() {
     </motion.div>
   );
 }
+// This code defines a page for viewing activity logs in an admin dashboard.
+// It fetches logs from an API, allows filtering by type and searching by user or action

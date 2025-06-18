@@ -1,90 +1,81 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-import Link from 'next/link';
+import autoTable from 'jspdf-autotable';
+
+//(autoTable as any)(jsPDF.prototype);
 
 interface Invoice {
-  id: string;
+  _id: string;
   customer: string;
   items: { name: string; quantity: number; price: number }[];
-  total: number;
   date: string;
+  status: 'paid' | 'unpaid';
 }
 
-const mockInvoices: Invoice[] = [
-  {
-    id: 'INV001',
-    customer: 'John Doe',
-    items: [
-      { name: 'Laptop', quantity: 1, price: 2500 },
-      { name: 'Mouse', quantity: 2, price: 25 },
-    ],
-    total: 2550,
-    date: '2025-06-13T09:30:00Z',
-  },
-  {
-    id: 'INV002',
-    customer: 'Jane Smith',
-    items: [
-      { name: 'Desk Chair', quantity: 1, price: 150 },
-      { name: 'Bookshelf', quantity: 1, price: 80 },
-    ],
-    total: 230,
-    date: '2025-06-13T10:15:00Z',
-  },
-];
-
 export default function InvoicePage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    // Simulate fetch
-    setInvoices(mockInvoices);
+    const fetchInvoices = async () => {
+      try {
+        const res = await fetch('/api/invoices');
+        const data = await res.json();
+        setInvoices(data);
+      } catch (error) {
+        console.error('Failed to fetch invoices:', error);
+      }
+    };
+    fetchInvoices();
   }, []);
 
-  const formatNaira = (amount: number) =>
+  if (status === 'loading') return <p>Loading...</p>;
+  if (!session || !['admin', 'superAdmin'].includes(session.user.role)) {
+    return <p className="text-red-500">Access denied.</p>;
+  }
+
+  const filtered = invoices.filter((invoice) => {
+    const lower = search.toLowerCase();
+    return (
+      invoice.customer.toLowerCase().includes(lower) ||
+      invoice.status.toLowerCase().includes(lower) ||
+      invoice.items.some((item) => item.name.toLowerCase().includes(lower))
+    );
+  });
+
+  const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-NG', {
       style: 'currency',
       currency: 'NGN',
     }).format(amount);
 
-  const handleDownload = (invoice: Invoice) => {
+  const handleExportPDF = () => {
     const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text('Invoice', 14, 20);
+    doc.setFontSize(16);
+    doc.text('Invoice Report', 14, 20);
 
-    doc.setFontSize(12);
-    doc.text(`Invoice ID: ${invoice.id}`, 14, 30);
-    doc.text(`Customer: ${invoice.customer}`, 14, 38);
-    doc.text(
-      `Date: ${new Date(invoice.date).toLocaleDateString('en-NG')}`,
-      14,
-      46
-    );
-
-    const tableData = invoice.items.map((item) => [
-      item.name,
-      item.quantity,
-      formatNaira(item.price),
-      formatNaira(item.quantity * item.price),
-    ]);
-
-    doc.autoTable({
-      startY: 55,
-      head: [['Item', 'Qty', 'Unit Price', 'Subtotal']],
-      body: tableData,
+    autoTable(doc, {
+      head: [['Invoice ID', 'Customer', 'Date', 'Total', 'Status']],
+      body: filtered.map((inv) => [
+        inv._id,
+        inv.customer,
+        inv.date,
+        formatCurrency(
+          inv.items.reduce((total, item) => total + item.price * item.quantity, 0)
+        ),
+        inv.status,
+      ]),
+      startY: 30,
     });
 
-    doc.text(
-      `Total: ${formatNaira(invoice.total)}`,
-      14,
-      doc.autoTable.previous.finalY + 10
-    );
-
-    doc.save(`${invoice.id}.pdf`);
+    doc.save('invoices.pdf');
   };
 
   return (
@@ -94,49 +85,72 @@ export default function InvoicePage() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <h1 className="text-3xl font-bold mb-6">Invoices</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Invoices</h1>
+        <button
+          onClick={() => router.push('/dashboard/invoices/new')}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          + New Invoice
+        </button>
+      </div>
 
-      <Link href="/dashboard/invoices/new" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">
-        + Create New Invoice
-      </Link>
+      <div className="mb-6 flex justify-between gap-4 flex-col sm:flex-row">
+        <input
+          type="text"
+          placeholder="Search invoices..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-800 dark:text-white w-full sm:w-80"
+        />
 
-      {invoices.length === 0 ? (
-        <p className="text-gray-500 dark:text-gray-400">No invoices available.</p>
+        <button
+          onClick={handleExportPDF}
+          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
+        >
+          Export PDF
+        </button>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="text-gray-500 dark:text-gray-400">No invoices found.</p>
       ) : (
-        <div className="space-y-4">
-          {invoices.map((inv) => (
-            <div
-              key={inv.id}
-              className="p-4 border border-gray-200 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 shadow-sm"
-            >
-              <div className="flex justify-between flex-wrap gap-4 items-center">
-                <div>
-                  <p className="font-semibold text-gray-800 dark:text-gray-200">
-                    Invoice #{inv.id}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Customer: {inv.customer}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Total: {formatNaira(inv.total)}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-500">
-                    Date: {new Date(inv.date).toLocaleString('en-NG', {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}
+        <div className="space-y-6">
+          {filtered.map((invoice) => {
+            const total = invoice.items.reduce(
+              (sum, item) => sum + item.price * item.quantity,
+              0
+            );
+            return (
+              <div
+                key={invoice._id}
+                className="p-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 shadow-sm"
+              >
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {invoice._id} - {invoice.customer}
+                    </h2>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Date: {invoice.date} • Status:{' '}
+                      <span
+                        className={
+                          invoice.status === 'paid'
+                            ? 'text-green-500'
+                            : 'text-yellow-500'
+                        }
+                      >
+                        {invoice.status}
+                      </span>
+                    </p>
+                  </div>
+                  <p className="text-md font-bold text-gray-900 dark:text-white">
+                    {formatCurrency(total)}
                   </p>
                 </div>
-
-                <button
-                  onClick={() => handleDownload(inv)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition text-sm"
-                >
-                  Download PDF
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </motion.div>
