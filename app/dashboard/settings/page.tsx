@@ -13,6 +13,9 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [notifications, setNotifications] = useState(true);
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -23,25 +26,60 @@ export default function SettingsPage() {
         setInvoice(data.invoice || {});
         setTheme(data.theme || 'system');
         setNotifications(data.notifications ?? true);
+        setImageUrl(data.imageUrl || '');
       }
     };
     fetchSettings();
   }, []);
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    setUploading(true);
+
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      setImageUrl(data.secure_url);
+      setUploading(false);
+    } catch (error) {
+      setErrorMessage('Image upload failed.');
+      setUploading(false);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage('');
+
     if (newPassword && newPassword !== confirmPassword) {
-      setSuccessMessage('❌ Passwords do not match.');
+      setSuccessMessage('');
+      setErrorMessage('❌ Passwords do not match.');
       return;
     }
-    const res = await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company, invoice, theme, notifications }),
-    });
-    const result = await res.json();
-    setSuccessMessage('✅ Settings updated successfully!');
-    setTimeout(() => setSuccessMessage(''), 3000);
+
+    try {
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ company, invoice, theme, notifications, newPassword, imageUrl }),
+      });
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result.message || 'Failed to update settings');
+
+      setSuccessMessage('✅ Settings updated successfully!');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error: any) {
+      setErrorMessage(error.message || 'An error occurred.');
+    }
   };
 
   if (status === 'loading') return <p>Loading...</p>;
@@ -66,12 +104,22 @@ export default function SettingsPage() {
             <input type="text" placeholder="Phone Number" value={company.phone} onChange={(e) => setCompany({ ...company, phone: e.target.value })} className="input" />
             <input type="text" placeholder="Address" value={company.address} onChange={(e) => setCompany({ ...company, address: e.target.value })} className="input" />
           </div>
+          <div className="mt-4">
+            <label className="block text-sm font-medium mb-1">Upload Company Logo (optional)</label>
+            <input type="file" accept="image/*" onChange={handleImageChange} className="input" />
+            {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
+            {imageUrl && <img src={imageUrl} alt="Company Logo" className="mt-2 h-20 object-contain" />}
+          </div>
         </section>
 
         <section>
           <h2 className="text-xl font-semibold mb-4">Invoice Preferences</h2>
           <textarea rows={3} placeholder="Invoice footer note..." value={invoice.footerNote} onChange={(e) => setInvoice({ ...invoice, footerNote: e.target.value })} className="textarea" />
-          <input disabled type="text" value="NGN - Nigerian Naira (₦)" className="input mt-2 bg-gray-100 dark:bg-gray-700 cursor-not-allowed" />
+          <select value={invoice.currency} onChange={(e) => setInvoice({ ...invoice, currency: e.target.value })} className="input mt-2">
+            <option value="NGN">NGN - Nigerian Naira (₦)</option>
+            <option value="USD">USD - US Dollar ($)</option>
+            <option value="EUR">EUR - Euro (€)</option>
+          </select>
         </section>
 
         <section>
@@ -106,6 +154,9 @@ export default function SettingsPage() {
         {successMessage && (
           <p className="text-green-600 dark:text-green-400 text-sm mt-2">{successMessage}</p>
         )}
+        {errorMessage && (
+          <p className="text-red-600 dark:text-red-400 text-sm mt-2">{errorMessage}</p>
+        )}
       </form>
 
       <div className="mt-10 border-t pt-6 border-gray-300 dark:border-gray-700">
@@ -119,5 +170,3 @@ export default function SettingsPage() {
     </motion.div>
   );
 }
-// This page allows super admins to manage application settings, including company info, invoice preferences, password changes, theme settings, and notification preferences.
-// It uses NextAuth for authentication and Framer Motion for animations.
