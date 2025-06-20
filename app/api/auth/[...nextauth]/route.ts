@@ -1,11 +1,12 @@
 // app/api/auth/[...nextauth]/route.ts
-import NextAuth from 'next-auth';
+import NextAuth, { AuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 
-const handler = NextAuth({
+// ✅ Export authOptions separately
+export const authOptions: AuthOptions = {
   providers: [
     Credentials({
       name: 'Credentials',
@@ -26,7 +27,7 @@ const handler = NextAuth({
         if (!isValid) throw new Error('Invalid password');
 
         return {
-          id: user._id.toString(), // ✅ convert to string
+          id: user._id.toString(), // ✅ ensure it's a string
           email: user.email,
           role: user.role,
         };
@@ -55,8 +56,9 @@ const handler = NextAuth({
     signIn: '/login',
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+// ✅ Handler using exported authOptions
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
-// This code sets up NextAuth with a credentials provider for user authentication.
-// It connects to the database, checks user credentials, and manages JWT sessions.
