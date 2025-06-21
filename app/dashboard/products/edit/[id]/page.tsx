@@ -1,93 +1,196 @@
-// app/dashboard/products/edit/[id]/page.tsx
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import UploadButton from '@/components/UploadButton';
 
 export default function EditProductPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
   const searchParams = useSearchParams();
-  const id = searchParams.get("id");
+  const { data: session, status } = useSession();
+  const id = searchParams.get('id');
 
   const [form, setForm] = useState({
-    name: "",
-    imageUrl: "",
-    price: "",
-    quantity: "",
-    category: "",
-    bundleWith: "",
-    discountedPrice: "",
+    name: '',
+    imageUrl: '',
+    price: '',
+    quantity: '',
+    category: '',
+    bundleWith: '',
+    discountedPrice: '',
     allowFractional: false,
   });
 
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
   useEffect(() => {
     const fetchProduct = async () => {
-      const res = await fetch(`/api/products/${id}`);
-      const data = await res.json();
-      setForm({
-        ...data,
-        price: data.price.toString(),
-        quantity: data.quantity.toString(),
-        discountedPrice: data.discountedPrice?.toString() || "",
-        bundleWith: data.bundleWith || "",
-      });
+      try {
+        const res = await fetch(`/api/products/${id}`);
+        if (!res.ok) throw new Error('Failed to load product');
+        const data = await res.json();
+        setForm({
+          name: data.name,
+          imageUrl: data.imageUrl || '',
+          price: data.price.toString(),
+          quantity: data.quantity.toString(),
+          category: data.category || '',
+          bundleWith: data.bundleWith || '',
+          discountedPrice: data.discountedPrice?.toString() || '',
+          allowFractional: data.allowFractional || false,
+        });
+      } catch (err: any) {
+        setError(err.message || 'Failed to load product');
+      }
     };
 
     if (id) fetchProduct();
   }, [id]);
 
-  if (status === "loading") return <p>Loading...</p>;
-  if (!session || session.user.role !== "superAdmin") {
-    return <p className="text-red-500">Access denied.</p>;
+  if (status === 'loading') return <p>Loading session...</p>;
+  if (!session || session.user.role !== 'superAdmin') {
+    return <p className="text-red-500">Access denied. Super admin only.</p>;
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     const payload = {
-      ...form,
+      name: form.name.trim(),
+      imageUrl: form.imageUrl.trim(),
       price: parseFloat(form.price),
       quantity: parseFloat(form.quantity),
-      discountedPrice: form.discountedPrice ? parseFloat(form.discountedPrice) : null,
+      category: form.category.trim(),
+      bundleWith: form.bundleWith || null,
+      discountedPrice: form.discountedPrice
+        ? parseFloat(form.discountedPrice)
+        : null,
+      allowFractional: form.allowFractional,
     };
 
-    await fetch(`/api/products/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const res = await fetch(`/api/products/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
-    router.push("/dashboard/products");
+      if (!res.ok) {
+        const result = await res.json();
+        throw new Error(result.message || 'Failed to update product');
+      }
+
+      router.push('/dashboard/products');
+    } catch (err: any) {
+      setError(err.message || 'Failed to update product.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="max-w-2xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">Edit Product</h1>
+
+      {error && <p className="text-red-500 mb-4 text-sm">{error}</p>}
+
       <form onSubmit={handleSubmit} className="space-y-4">
-        <input name="name" value={form.name} onChange={handleChange} placeholder="Product Name" className="input" required />
-        <input name="imageUrl" value={form.imageUrl} onChange={handleChange} placeholder="Image URL" className="input" />
-        <input name="price" value={form.price} onChange={handleChange} placeholder="Price" type="number" className="input" required />
-        <input name="quantity" value={form.quantity} onChange={handleChange} placeholder="Quantity" type="number" className="input" required />
-        <input name="category" value={form.category} onChange={handleChange} placeholder="Category" className="input" />
-        <input name="discountedPrice" value={form.discountedPrice} onChange={handleChange} placeholder="Discounted Price (for 2+)" type="number" className="input" />
-        <input name="bundleWith" value={form.bundleWith} onChange={handleChange} placeholder="Bundle Product ID (optional)" className="input" />
+        <input
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          placeholder="Product Name"
+          className="input"
+          required
+        />
+
+        {/* ✅ Image Preview */}
+        {form.imageUrl && (
+          <img
+            src={form.imageUrl}
+            alt="Preview"
+            className="w-full h-48 object-cover rounded border"
+          />
+        )}
+
+        {/* ✅ Upload button */}
+        <UploadButton onUpload={(url) => setForm((prev) => ({ ...prev, imageUrl: url }))} />
+
+        <input
+          name="price"
+          value={form.price}
+          onChange={handleChange}
+          placeholder="Price"
+          type="number"
+          step="0.01"
+          min="0"
+          className="input"
+          required
+        />
+        <input
+          name="quantity"
+          value={form.quantity}
+          onChange={handleChange}
+          placeholder="Quantity"
+          type="number"
+          min="0"
+          className="input"
+          required
+        />
+        <input
+          name="category"
+          value={form.category}
+          onChange={handleChange}
+          placeholder="Category"
+          className="input"
+        />
+        <input
+          name="discountedPrice"
+          value={form.discountedPrice}
+          onChange={handleChange}
+          placeholder="Discounted Price (for 2+)"
+          type="number"
+          step="0.01"
+          min="0"
+          className="input"
+        />
+        <input
+          name="bundleWith"
+          value={form.bundleWith}
+          onChange={handleChange}
+          placeholder="Bundle Product ID (optional)"
+          className="input"
+        />
         <label className="flex items-center space-x-2">
-          <input type="checkbox" name="allowFractional" checked={form.allowFractional} onChange={handleChange} />
+          <input
+            type="checkbox"
+            name="allowFractional"
+            checked={form.allowFractional}
+            onChange={handleChange}
+          />
           <span>Allow fractional sales</span>
         </label>
-        <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Update Product</button>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+        >
+          {loading ? 'Saving...' : 'Update Product'}
+        </button>
       </form>
     </div>
   );
-// This code defines a page for editing a product in a Next.js application.
-// It fetches the product data based on the ID from the URL, allows the user to update the product details, and submits the changes to the server.
 }

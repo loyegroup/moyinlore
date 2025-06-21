@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import UploadButton from '@/components/UploadButton'; 
 
 export default function NewProductPage() {
   const [form, setForm] = useState({
@@ -77,13 +78,21 @@ export default function NewProductPage() {
           className="input"
           required
         />
-        <input
-          name="imageUrl"
-          value={form.imageUrl}
-          onChange={handleChange}
-          placeholder="Image URL"
-          className="input"
-        />
+
+        {/* ✅ Cloudinary Upload */}
+        <div>
+          <UploadButton
+            onUpload={(url) => setForm((prev) => ({ ...prev, imageUrl: url }))}
+          />
+          {form.imageUrl && (
+            <img
+              src={form.imageUrl}
+              alt="Uploaded"
+              className="w-40 h-40 mt-2 object-cover rounded border"
+            />
+          )}
+        </div>
+
         <input
           name="price"
           value={form.price}
