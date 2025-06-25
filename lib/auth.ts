@@ -1,56 +1,24 @@
-/// app/api/auth/[...nextauth]/authOptions.ts
-import CredentialsProvider from 'next-auth/providers/credentials';
-import { AuthOptions } from 'next-auth';
-import { compare } from 'bcryptjs';
-import User from '@/models/User';
-import { connectDB } from '@/lib/db';
+// lib/auth.ts
 
-export const authOptions: AuthOptions = {
-  providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' },
-      },
-      async authorize(credentials) {
-        await connectDB();
+import { unstable_getServerSession } from 'next-auth/next';
+import { getSession } from 'next-auth/react';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-        const user = await User.findOne({ email: credentials?.email });
-        if (!user) throw new Error('No user found');
-
-        const isValid = await compare(credentials!.password, user.password);
-        if (!isValid) throw new Error('Invalid password');
-
-        return {
-          id: user._id.toString(),
-          email: user.email,
-          role: user.role,
-        };
-      },
-    }),
-  ],
-  session: {
-    strategy: 'jwt',
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.role = user.role;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token?.role) {
-        session.user.role = token.role;
-      }
-      return session;
-    },
-  },
-  pages: {
-    signIn: '/login',
-    error: '/login?error=CredentialsSignin',
-  },
+/**
+ * Get the session on the server side (e.g., API routes, server components)
+ */
+export const getServerAuthSession = async (req?: any, res?: any) => {
+  if (req && res) {
+    // For API routes with req and res
+    return await unstable_getServerSession(req, res, authOptions);
+  }
+  // For server components
+  return await unstable_getServerSession(authOptions);
 };
-export default authOptions;
-// This code sets up NextAuth.js with a credentials provider for user authentication.
+
+/**
+ * Get the session on the client side (use this in client components)
+ */
+export const getClientAuthSession = async () => {
+  return await getSession();
+};

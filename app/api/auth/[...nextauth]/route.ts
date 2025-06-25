@@ -1,33 +1,39 @@
 // app/api/auth/[...nextauth]/route.ts
-import NextAuth, { AuthOptions } from 'next-auth';
-import Credentials from 'next-auth/providers/credentials';
+import NextAuth from 'next-auth/next';
+import CredentialsProvider from 'next-auth/providers/credentials';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
 
-// ✅ Export authOptions separately
-export const authOptions: AuthOptions = {
+export const authOptions = {
   providers: [
-    Credentials({
+    CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: {},
-        password: {},
+        email: { label: 'Email', type: 'email', placeholder: 'example@example.com' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         await connectDB();
-        if (!credentials || !credentials.email || !credentials.password) {
-          throw new Error('Missing credentials');
+
+        if (!credentials?.email || !credentials?.password) {
+          throw new Error('Missing email or password');
         }
 
         const user = await User.findOne({ email: credentials.email });
-        if (!user) throw new Error('No user found');
+
+        if (!user) {
+          throw new Error('No user found');
+        }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) throw new Error('Invalid password');
+
+        if (!isValid) {
+          throw new Error('Invalid password');
+        }
 
         return {
-          id: user._id.toString(), // ✅ ensure it's a string
+          id: user._id.toString(),
           email: user.email,
           role: user.role,
         };
@@ -38,16 +44,19 @@ export const authOptions: AuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
+        token.id = user.id;
+        token.email = user.email;
         token.role = user.role;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (session.user) {
-        session.user.role = token.role;
-        session.user.id = token.sub ?? '';
+        session.user.id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.role = token.role as 'admin' | 'superAdmin';
       }
       return session;
     },
@@ -58,7 +67,6 @@ export const authOptions: AuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
 };
 
-// ✅ Handler using exported authOptions
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

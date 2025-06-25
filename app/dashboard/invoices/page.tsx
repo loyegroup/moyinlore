@@ -7,14 +7,16 @@ import { motion } from 'framer-motion';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-//(autoTable as any)(jsPDF.prototype);
-
 interface Invoice {
   _id: string;
   customer: string;
   items: { name: string; quantity: number; price: number }[];
   date: string;
-  status: 'paid' | 'unpaid';
+  status: 'paid' | 'unpaid' | 'partially';
+  amountPaid?: number;
+  amountOwed?: number;
+  cashPayment?: number;
+  onlinePayment?: number;
 }
 
 export default function InvoicePage() {
@@ -22,24 +24,21 @@ export default function InvoicePage() {
   const router = useRouter();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [search, setSearch] = useState('');
+  const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchInvoices = async () => {
-      try {
-        const res = await fetch('/api/invoices');
-        const data = await res.json();
-        setInvoices(data);
-      } catch (error) {
-        console.error('Failed to fetch invoices:', error);
-      }
-    };
-    fetchInvoices();
+    fetch('/api/invoices')
+      .then((res) => res.json())
+      .then(setInvoices)
+      .catch(() => console.error('Failed to fetch invoices'));
   }, []);
 
   if (status === 'loading') return <p>Loading...</p>;
-  if (!session || !['admin', 'superAdmin'].includes(session.user.role)) {
-    return <p className="text-red-500">Access denied.</p>;
-  }
+
+  const userRole = (session?.user as any)?.role;
+  const isAuthorized = userRole === 'admin' || userRole === 'superAdmin';
+
+  if (!session || !isAuthorized) return <p className="text-red-500">Access denied.</p>;
 
   const filtered = invoices.filter((invoice) => {
     const lower = search.toLowerCase();
@@ -56,26 +55,48 @@ export default function InvoicePage() {
       currency: 'NGN',
     }).format(amount);
 
-  const handleExportPDF = () => {
+  const exportSingleInvoice = (invoice: Invoice) => {
     const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text('Invoice Report', 14, 20);
+    doc.setFontSize(18);
+    doc.text(`Invoice #${invoice._id}`, 14, 20);
+    doc.setFontSize(12);
+
+    doc.text(`Customer: ${invoice.customer}`, 14, 30);
+    doc.text(`Date: ${invoice.date}`, 14, 37);
+    doc.text(`Status: ${invoice.status}`, 14, 44);
+    doc.text(`Cash Payment: ${formatCurrency(invoice.cashPayment || 0)}`, 14, 51);
+    doc.text(`Online Payment: ${formatCurrency(invoice.onlinePayment || 0)}`, 14, 58);
+    doc.text(`Amount Paid: ${formatCurrency(invoice.amountPaid || 0)}`, 14, 65);
+    doc.text(`Amount Owed: ${formatCurrency(invoice.amountOwed || 0)}`, 14, 72);
 
     autoTable(doc, {
-      head: [['Invoice ID', 'Customer', 'Date', 'Total', 'Status']],
-      body: filtered.map((inv) => [
-        inv._id,
-        inv.customer,
-        inv.date,
-        formatCurrency(
-          inv.items.reduce((total, item) => total + item.price * item.quantity, 0)
-        ),
-        inv.status,
+      head: [['Product', 'Qty', 'Price', 'Subtotal']],
+      body: invoice.items.map((item) => [
+        item.name,
+        item.quantity,
+        formatCurrency(item.price),
+        formatCurrency(item.quantity * item.price),
       ]),
-      startY: 30,
+      startY: 80,
     });
 
-    doc.save('invoices.pdf');
+    doc.save(`invoice_${invoice._id}.pdf`);
+  };
+
+  const handleDeleteInvoice = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this invoice?')) return;
+
+    try {
+      const res = await fetch(`/api/invoices/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Failed to delete invoice');
+      setInvoices((prev) => prev.filter((inv) => inv._id !== id));
+    } catch (err) {
+      alert('Error deleting invoice');
+      console.error(err);
+    }
   };
 
   return (
@@ -95,7 +116,7 @@ export default function InvoicePage() {
         </button>
       </div>
 
-      <div className="mb-6 flex justify-between gap-4 flex-col sm:flex-row">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between">
         <input
           type="text"
           placeholder="Search invoices..."
@@ -103,13 +124,6 @@ export default function InvoicePage() {
           onChange={(e) => setSearch(e.target.value)}
           className="px-4 py-2 border border-gray-300 rounded-md dark:bg-gray-800 dark:text-white w-full sm:w-80"
         />
-
-        <button
-          onClick={handleExportPDF}
-          className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800"
-        >
-          Export PDF
-        </button>
       </div>
 
       {filtered.length === 0 ? (
@@ -121,12 +135,15 @@ export default function InvoicePage() {
               (sum, item) => sum + item.price * item.quantity,
               0
             );
+
+            const isOpen = expandedInvoiceId === invoice._id;
+
             return (
               <div
                 key={invoice._id}
                 className="p-4 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-gray-800 shadow-sm"
               >
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mb-2">
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                       {invoice._id} - {invoice.customer}
@@ -137,17 +154,78 @@ export default function InvoicePage() {
                         className={
                           invoice.status === 'paid'
                             ? 'text-green-500'
-                            : 'text-yellow-500'
+                            : invoice.status === 'partially'
+                            ? 'text-yellow-500'
+                            : 'text-red-500'
                         }
                       >
                         {invoice.status}
                       </span>
                     </p>
                   </div>
-                  <p className="text-md font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(total)}
-                  </p>
+                  <div className="flex gap-3 items-center">
+                    <p className="text-md font-bold text-gray-900 dark:text-white">
+                      {formatCurrency(total)}
+                    </p>
+                    <button
+                      onClick={() =>
+                        setExpandedInvoiceId(isOpen ? null : invoice._id)
+                      }
+                      className="text-sm text-blue-600 underline"
+                    >
+                      {isOpen ? 'Hide' : 'View'}
+                    </button>
+                    <button
+                      onClick={() => exportSingleInvoice(invoice)}
+                      className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white"
+                    >
+                      Download PDF
+                    </button>
+                    {userRole === 'superAdmin' && (
+                      <button
+                        onClick={() => handleDeleteInvoice(invoice._id)}
+                        className="text-sm text-red-600 hover:text-red-800"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
                 </div>
+
+                {isOpen && (
+                  <div className="mt-4 text-sm text-gray-700 dark:text-gray-300">
+                    <table className="w-full mb-4 border border-gray-300 dark:border-gray-600 text-sm">
+                      <thead className="bg-gray-100 dark:bg-gray-700">
+                        <tr>
+                          <th className="p-2 text-left">Product</th>
+                          <th className="p-2">Qty</th>
+                          <th className="p-2">Price</th>
+                          <th className="p-2">Subtotal</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invoice.items.map((item, i) => (
+                          <tr key={i} className="text-center border-t dark:border-gray-700">
+                            <td className="p-2 text-left">{item.name}</td>
+                            <td className="p-2">{item.quantity}</td>
+                            <td className="p-2">{formatCurrency(item.price)}</td>
+                            <td className="p-2">
+                              {formatCurrency(item.quantity * item.price)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    <p>
+                      Cash: {formatCurrency(invoice.cashPayment || 0)} | Online:{' '}
+                      {formatCurrency(invoice.onlinePayment || 0)}
+                    </p>
+                    <p>
+                      Total Paid: {formatCurrency(invoice.amountPaid || 0)} | Amount Owed:{' '}
+                      {formatCurrency(invoice.amountOwed || 0)}
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
