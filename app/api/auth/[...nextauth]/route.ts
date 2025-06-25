@@ -1,9 +1,11 @@
-// app/api/auth/[...nextauth]/route.ts
 import NextAuth from 'next-auth/next';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
-import bcrypt from 'bcryptjs';
+
+import type { Session } from 'next-auth';
+import type { JWT } from 'next-auth/jwt';
 
 export const authOptions = {
   providers: [
@@ -41,10 +43,10 @@ export const authOptions = {
     }),
   ],
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
   },
   callbacks: {
-    async jwt({ token, user }: { token: any; user?: any }) {
+    async jwt({ token, user }: { token: JWT; user?: any }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
@@ -52,7 +54,7 @@ export const authOptions = {
       }
       return token;
     },
-    async session({ session, token }: { session: any; token: any }) {
+    async session({ session, token }: { session: any; token: JWT }) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.email = token.email as string;
@@ -68,5 +70,4 @@ export const authOptions = {
 };
 
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };

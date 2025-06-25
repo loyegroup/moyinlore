@@ -49,8 +49,12 @@ export default function EditProductPage() {
     if (id) fetchProduct();
   }, [id]);
 
-  if (status === 'loading') return <p>Loading session...</p>;
-  if (!session || session.user.role !== 'superAdmin') {
+  // ✅ Safe session and role check using inline type assertion
+  if (
+    status !== 'authenticated' ||
+    !session.user ||
+    (session.user as { role?: string })?.role !== 'superAdmin'
+  ) {
     return <p className="text-red-500">Access denied. Super admin only.</p>;
   }
 
@@ -116,7 +120,6 @@ export default function EditProductPage() {
           required
         />
 
-        {/* ✅ Image Preview */}
         {form.imageUrl && (
           <img
             src={form.imageUrl}
@@ -125,7 +128,6 @@ export default function EditProductPage() {
           />
         )}
 
-        {/* ✅ Upload button */}
         <UploadButton onUpload={(url) => setForm((prev) => ({ ...prev, imageUrl: url }))} />
 
         <input
