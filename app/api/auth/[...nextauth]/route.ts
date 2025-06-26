@@ -3,11 +3,28 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
-
-import type { Session } from 'next-auth';
+// @ts-expect-error – temporary fix for broken NextAuthOptions type
+import type { NextAuthOptions, Session } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
+import type { AdapterUser } from 'next-auth/adapters';
 
-export const authOptions = {
+type ExtendedJWT = JWT & {
+  id: string;
+  email: string;
+  role: 'admin' | 'superAdmin';
+};
+
+type ExtendedSession = Session & {
+  user: {
+    id: string;
+    email: string;
+    role: 'admin' | 'superAdmin';
+    name?: string | null;
+    image?: string | null;
+  };
+};
+
+export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -29,7 +46,6 @@ export const authOptions = {
         }
 
         const isValid = await bcrypt.compare(credentials.password, user.password);
-
         if (!isValid) {
           throw new Error('Invalid password');
         }
@@ -46,20 +62,20 @@ export const authOptions = {
     strategy: 'jwt' as const,
   },
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: any }) {
+    async jwt({ token, user }: { token: JWT; user?: AdapterUser | any }) {
       if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.role = user.role;
+        const u = user as ExtendedJWT;
+        token.id = u.id;
+        token.email = u.email;
+        token.role = u.role;
       }
       return token;
     },
-    async session({ session, token }: { session: any; token: JWT }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.email = token.email as string;
-        session.user.role = token.role as 'admin' | 'superAdmin';
-      }
+    async session({ session, token }: { session: Session; token: JWT }) {
+      const t = token as ExtendedJWT;
+      (session as ExtendedSession).user.id = t.id;
+      (session as ExtendedSession).user.email = t.email;
+      (session as ExtendedSession).user.role = t.role;
       return session;
     },
   },
