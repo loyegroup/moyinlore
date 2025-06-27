@@ -8,22 +8,6 @@ import type { NextAuthOptions, Session } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 import type { AdapterUser } from 'next-auth/adapters';
 
-type ExtendedJWT = JWT & {
-  id: string;
-  email: string;
-  role: 'admin' | 'superAdmin';
-};
-
-type ExtendedSession = Session & {
-  user: {
-    id: string;
-    email: string;
-    role: 'admin' | 'superAdmin';
-    name?: string | null;
-    image?: string | null;
-  };
-};
-
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -59,23 +43,33 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: {
-    strategy: 'jwt' as const,
+    strategy: 'jwt',
   },
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: AdapterUser | any }) {
+    async jwt({
+      token,
+      user,
+    }: {
+      token: JWT;
+      user?: AdapterUser;
+    }) {
       if (user) {
-        const u = user as ExtendedJWT;
-        token.id = u.id;
-        token.email = u.email;
-        token.role = u.role;
+        token.id = user.id;
+        token.email = user.email;
+        token.role = (user as any).role ?? 'admin';
       }
       return token;
     },
-    async session({ session, token }: { session: Session; token: JWT }) {
-      const t = token as ExtendedJWT;
-      (session as ExtendedSession).user.id = t.id;
-      (session as ExtendedSession).user.email = t.email;
-      (session as ExtendedSession).user.role = t.role;
+    async session({
+      session,
+      token,
+    }: {
+      session: Session;
+      token: JWT;
+    }) {
+      session.user.id = token.id as string;
+      session.user.email = token.email as string;
+      session.user.role = token.role as 'admin' | 'superAdmin';
       return session;
     },
   },

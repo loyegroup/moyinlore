@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import UploadButton from '@/components/UploadButton'; 
+import UploadButton from '@/components/UploadButton';
+import Image from 'next/image';
 
 export default function NewProductPage() {
   const [form, setForm] = useState({
@@ -61,8 +62,10 @@ export default function NewProductPage() {
       }
 
       router.push('/dashboard/products');
-    } catch (error) {
-      console.error('❌ Error saving product:', error);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Something went wrong.';
+      console.error('❌ Error saving product:', message);
     }
   };
 
@@ -79,15 +82,17 @@ export default function NewProductPage() {
           required
         />
 
-        {/* ✅ Cloudinary Upload */}
+        {/* ✅ Cloudinary Upload & Preview with <Image /> */}
         <div>
           <UploadButton
             onUpload={(url) => setForm((prev) => ({ ...prev, imageUrl: url }))}
           />
           {form.imageUrl && (
-            <img
+            <Image
               src={form.imageUrl}
               alt="Uploaded"
+              width={160}
+              height={160}
               className="w-40 h-40 mt-2 object-cover rounded border"
             />
           )}

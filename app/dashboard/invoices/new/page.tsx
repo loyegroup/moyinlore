@@ -13,10 +13,19 @@ interface Product {
   allowFractional?: boolean;
 }
 
+interface InvoiceItem {
+  productId: string;
+  name: string;
+  quantity: number;
+  price: number;
+  maxQuantity?: number;
+  allowFractional?: boolean;
+}
+
 export default function NewInvoicePage() {
   const router = useRouter();
   const [customer, setCustomer] = useState('');
-  const [items, setItems] = useState<any[]>([]);
+  const [items, setItems] = useState<InvoiceItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [status, setStatus] = useState('unpaid');
   const [cashPayment, setCashPayment] = useState(0);
@@ -30,7 +39,7 @@ export default function NewInvoicePage() {
 
   useEffect(() => {
     fetch('/api/products')
-      .then(res => res.json())
+      .then((res) => res.json())
       .then(setProducts)
       .catch(() => setError('Failed to load products'));
   }, []);
@@ -52,8 +61,8 @@ export default function NewInvoicePage() {
       allowFractional: product.allowFractional,
     };
 
-    if (product.bundleWith && !updatedItems.find(i => i.productId === product.bundleWith)) {
-      const bundled = products.find(p => p._id === product.bundleWith);
+    if (product.bundleWith && !updatedItems.find((i) => i.productId === product.bundleWith)) {
+      const bundled = products.find((p) => p._id === product.bundleWith);
       if (bundled) {
         updatedItems.push({
           productId: bundled._id,
@@ -85,7 +94,7 @@ export default function NewInvoicePage() {
     setItems(updated);
   };
 
-  const handleAddItem = () => setItems([...items, { productId: '', quantity: 1, price: 0 }]);
+  const handleAddItem = () => setItems([...items, { productId: '', quantity: 1, price: 0, name: '' }]);
   const handleRemoveItem = (index: number) => setItems(items.filter((_, i) => i !== index));
 
   const handleSubmit = async (e: React.FormEvent) => {

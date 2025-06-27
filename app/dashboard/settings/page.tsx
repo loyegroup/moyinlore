@@ -3,9 +3,21 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
+
+type SessionUser = {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  role?: string | null;
+};
+
+type SessionData = {
+  user?: SessionUser;
+};
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession() as { data: SessionData | null, status: string };
   const [company, setCompany] = useState({ name: '', email: '', phone: '', address: '' });
   const [invoice, setInvoice] = useState({ footerNote: '', currency: 'NGN' });
   const [theme, setTheme] = useState('system');
@@ -48,9 +60,10 @@ export default function SettingsPage() {
 
       const data = await res.json();
       setImageUrl(data.secure_url);
-      setUploading(false);
-    } catch (error) {
-      setErrorMessage('Image upload failed.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Image upload failed.';
+      setErrorMessage(message);
+    } finally {
       setUploading(false);
     }
   };
@@ -77,14 +90,15 @@ export default function SettingsPage() {
 
       setSuccessMessage('✅ Settings updated successfully!');
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error: any) {
-      setErrorMessage(error.message || 'An error occurred.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'An error occurred.';
+      setErrorMessage(message);
     }
   };
 
   if (status === 'loading') return <p>Loading...</p>;
   if (!session) return <p className="text-red-500">You must be logged in to view settings.</p>;
-  if (session.user.role !== 'superAdmin') return <p className="text-red-500">Access denied. Only superAdmins can manage settings.</p>;
+  if (!session.user || session.user.role !== 'superAdmin') return <p className="text-red-500">Access denied. Only superAdmins can manage settings.</p>;
 
   return (
     <motion.div
@@ -108,7 +122,11 @@ export default function SettingsPage() {
             <label className="block text-sm font-medium mb-1">Upload Company Logo (optional)</label>
             <input type="file" accept="image/*" onChange={handleImageChange} className="input" />
             {uploading && <p className="text-sm text-gray-500">Uploading...</p>}
-            {imageUrl && <img src={imageUrl} alt="Company Logo" className="mt-2 h-20 object-contain" />}
+            {imageUrl && (
+              <div className="relative w-32 h-20 mt-2">
+                <Image src={imageUrl} alt="Company Logo" fill className="object-contain" />
+              </div>
+            )}
           </div>
         </section>
 

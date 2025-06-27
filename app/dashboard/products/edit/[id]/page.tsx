@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import UploadButton from '@/components/UploadButton';
+import Image from 'next/image';
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -41,15 +42,16 @@ export default function EditProductPage() {
           discountedPrice: data.discountedPrice?.toString() || '',
           allowFractional: data.allowFractional || false,
         });
-      } catch (err: any) {
-        setError(err.message || 'Failed to load product');
+      } catch (err: unknown) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to load product';
+        setError(message);
       }
     };
 
     if (id) fetchProduct();
   }, [id]);
 
-  // ✅ Safe session and role check using inline type assertion
   if (
     status !== 'authenticated' ||
     !session.user ||
@@ -97,8 +99,10 @@ export default function EditProductPage() {
       }
 
       router.push('/dashboard/products');
-    } catch (err: any) {
-      setError(err.message || 'Failed to update product.');
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to update product';
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -121,14 +125,20 @@ export default function EditProductPage() {
         />
 
         {form.imageUrl && (
-          <img
-            src={form.imageUrl}
-            alt="Preview"
-            className="w-full h-48 object-cover rounded border"
-          />
+          <div className="relative w-full h-48">
+            <Image
+              src={form.imageUrl}
+              alt="Preview"
+              layout="fill"
+              objectFit="cover"
+              className="rounded border"
+            />
+          </div>
         )}
 
-        <UploadButton onUpload={(url) => setForm((prev) => ({ ...prev, imageUrl: url }))} />
+        <UploadButton
+          onUpload={(url) => setForm((prev) => ({ ...prev, imageUrl: url }))}
+        />
 
         <input
           name="price"

@@ -13,10 +13,10 @@ export default function AboutSection() {
           About Us
         </h2>
         <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed max-w-3xl mx-auto">
-          Oreoluwa Venture is a trusted name in biscuit distribution and retail, proudly serving customers for over a decade. 
-          With a reputation built on consistency, quality, and excellent customer service, we’ve become a household choice 
-          for individuals, retailers, and event planners across Nigeria. Whether you're buying in bulk or for personal use, 
-          we’re here to deliver satisfaction—one biscuit at a time.
+          Oreoluwa Venture is a trusted name in biscuit distribution and retail, proudly serving customers for over a decade.
+          With a reputation built on consistency, quality, and excellent customer service, we have become a household choice
+          for individuals, retailers, and event planners across Nigeria. Whether you are buying in bulk or for personal use,
+          we are here to deliver satisfaction—one biscuit at a time.
         </p>
       </div>
     </section>

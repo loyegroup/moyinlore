@@ -19,6 +19,8 @@ interface Invoice {
   onlinePayment?: number;
 }
 
+type Role = 'admin' | 'superAdmin';
+
 export default function InvoicePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -35,8 +37,8 @@ export default function InvoicePage() {
 
   if (status === 'loading') return <p>Loading...</p>;
 
-  const userRole = (session?.user as any)?.role;
-  const isAuthorized = userRole === 'admin' || userRole === 'superAdmin';
+  const role = session?.user && 'role' in session.user ? (session.user.role as Role) : undefined;
+  const isAuthorized = role === 'admin' || role === 'superAdmin';
 
   if (!session || !isAuthorized) return <p className="text-red-500">Access denied.</p>;
 
@@ -181,7 +183,7 @@ export default function InvoicePage() {
                     >
                       Download PDF
                     </button>
-                    {userRole === 'superAdmin' && (
+                    {role === 'superAdmin' && (
                       <button
                         onClick={() => handleDeleteInvoice(invoice._id)}
                         className="text-sm text-red-600 hover:text-red-800"

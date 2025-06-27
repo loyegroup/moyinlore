@@ -1,8 +1,6 @@
 'use client';
 
-import { useTheme } from 'next-themes';
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import Navbar from '@/components/Navbar';
 import HeroSection from '@/components/HeroSection';
 import AboutSection from '@/components/AboutSection';
@@ -11,7 +9,6 @@ import ContactSection from '@/components/ContactSection';
 import Footer from '@/components/Footer';
 
 export default function HomePage() {
-  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);

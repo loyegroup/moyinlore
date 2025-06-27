@@ -1,4 +1,4 @@
-// next-auth.d.ts
+// This file is used to extend the NextAuth types for TypeScript support.
 import NextAuth, { DefaultSession } from 'next-auth';
 import { JWT as DefaultJWT } from 'next-auth/jwt';
 

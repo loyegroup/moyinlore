@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { signIn } from 'next-auth/react';
+import Link from 'next/link'; // ✅ Import Link
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,20 +16,25 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const res = await signIn('credentials', {
-      email,
-      password,
-      redirect: false,
-      callbackUrl: '/dashboard',
-    });
+    try {
+      const res = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+        callbackUrl: '/dashboard',
+      });
 
-    console.log('🔐 signIn result:', res);
-    setLoading(false);
-
-    if (res?.ok && res.url) {
-      window.location.href = res.url; // ✅ hard redirect guarantees it works
-    } else {
-      setError('Invalid credentials. Please try again.');
+      if (res?.ok && res.url) {
+        window.location.href = res.url;
+      } else {
+        setError(res?.error || 'Invalid credentials. Please try again.');
+      }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'An unexpected error occurred.';
+      setError(message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,20 +54,22 @@ export default function LoginPage() {
           <input
             type="email"
             placeholder="Email"
-            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
             required
           />
           <input
             type="password"
             placeholder="Password"
-            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-white"
             required
           />
+
           {error && <p className="text-red-500 text-sm">{error}</p>}
+
           <button
             type="submit"
             disabled={loading}
@@ -72,9 +80,10 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-4 text-sm text-center">
-          <a href="/" className="text-blue-600 dark:text-blue-400 hover:underline">
+          {/* ✅ Replaced <a> with <Link> */}
+          <Link href="/" className="text-blue-600 dark:text-blue-400 hover:underline">
             ← Back to home
-          </a>
+          </Link>
         </div>
       </motion.div>
     </main>

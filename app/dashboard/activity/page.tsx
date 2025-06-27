@@ -85,7 +85,7 @@ export default function ActivityLogPage() {
         <div className="flex gap-3 items-center w-full sm:w-auto">
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value as any)}
+            onChange={(e) => setFilterType(e.target.value as 'all' | LogEntry['type'])}
             className="px-3 py-2 border rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white"
           >
             <option value="all">All Types</option>
