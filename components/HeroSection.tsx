@@ -30,7 +30,7 @@ export default function HeroSection() {
         </p>
         <Link
           href="#catalogue"
-          className="inline-block bg-blue-600 text-white px-6 py-3 rounded-md text-lg font-semibold hover:bg-blue-700 animate__animated animate__bounce animate__infinite"
+          className="inline-block bg-[#800020] text-white px-6 py-3 rounded-md text-lg font-semibold hover:bg-[#5c4033] animate__animated animate__bounce animate__infinite"
         >
           Buy Now
         </Link>

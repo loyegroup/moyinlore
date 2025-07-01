@@ -29,7 +29,7 @@ export default function ContactSection() {
             </a>
           </p>
           <p>
-            📍 9, Anifowoshe Street, Agbede, Ikorodu, Lagos, Nigeria
+            📍 29, Tikulosoro, Agbede, Ikorodu, Lagos, Nigeria
           </p>
         </div>
       </div>

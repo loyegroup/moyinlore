@@ -91,7 +91,7 @@ export default function CatalogueSection() {
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-4 inline-block bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 px-4 rounded text-center transition"
+                    className="mt-4 inline-block bg-[#800020] hover:bg-[#5c4033] text-white text-sm font-medium py-2 px-4 rounded text-center transition"
                   >
                     Buy Now
                   </a>
