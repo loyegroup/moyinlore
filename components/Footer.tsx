@@ -12,7 +12,7 @@ export default function Footer() {
         <p className="text-xs mt-1">
           Created by{' '}
           <a
-            href="www.loye-group.vercel.app"
+            href="https://loye-group.vercel.app"
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 dark:text-blue-400 hover:underline"
@@ -24,4 +24,3 @@ export default function Footer() {
     </footer>
   );
 }
-// This Footer component is a simple, responsive footer for a Next.js application.

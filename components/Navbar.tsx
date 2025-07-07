@@ -9,7 +9,6 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  // Close menu on route change
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
@@ -18,16 +17,25 @@ export default function Navbar() {
     <header className="w-full bg-white dark:bg-gray-900 shadow-md animate__animated animate__fadeInDown">
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         {/* Logo */}
-        <Link href="/" className="text-2xl font-bold text-blue-600">
-          Oreoluwa Venture
+        <Link href="/" className="flex items-center">
+          <img
+            src="/logo.png"
+            alt="Logo"
+            className="h-8 w-14"
+          />
         </Link>
 
         {/* Desktop Links */}
-        <nav className="hidden md:flex gap-8 text-sm font-medium text-gray-700 dark:text-gray-200">
-          <Link href="/" className="hover:text-blue-500">Home</Link>
-          <Link href="#about" className="hover:text-blue-500">About</Link>
-          <Link href="#catalogue" className="hover:text-blue-500">Catalogue</Link>
-          <Link href="#contact" className="hover:text-blue-500">Contact</Link>
+        <nav className="hidden md:flex text-sm font-medium text-gray-700 dark:text-gray-200 border-l border-gray-300 dark:border-gray-700">
+          {['Home', 'About', 'Catalogue', 'Contact'].map((text, i) => (
+            <Link
+              key={text}
+              href={text === 'Home' ? '/' : `#${text.toLowerCase()}`}
+              className={`px-4 py-2 hover:text-blue-500 transition-transform transform hover:scale-110 border-r border-gray-300 dark:border-gray-700`}
+            >
+              {text}
+            </Link>
+          ))}
         </nav>
 
         {/* Hamburger for mobile */}
@@ -47,11 +55,16 @@ export default function Navbar() {
       {/* Mobile Menu */}
       {menuOpen && (
         <div className="md:hidden px-4 pb-4 animate__animated animate__fadeInDown">
-          <nav className="flex flex-col gap-3 text-sm text-gray-700 dark:text-gray-200">
-            <Link href="/" className="hover:text-blue-500">Home</Link>
-            <Link href="#about" className="hover:text-blue-500">About</Link>
-            <Link href="#catalogue" className="hover:text-blue-500">Catalogue</Link>
-            <Link href="#contact" className="hover:text-blue-500">Contact</Link>
+          <nav className="flex flex-col text-sm text-gray-700 dark:text-gray-200 border-t border-gray-300 dark:border-gray-700">
+            {['Home', 'About', 'Catalogue', 'Contact'].map((text, i) => (
+              <Link
+                key={text}
+                href={text === 'Home' ? '/' : `#${text.toLowerCase()}`}
+                className="py-3 px-2 border-b border-gray-300 dark:border-gray-700 hover:text-blue-500 transition-transform transform hover:scale-105"
+              >
+                {text}
+              </Link>
+            ))}
           </nav>
         </div>
       )}

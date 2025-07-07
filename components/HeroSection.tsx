@@ -12,7 +12,7 @@ export default function HeroSection() {
     >
       {/* Background Image */}
       <Image
-        src="/hero.jpg" // 🔁 Replace with your own photo path
+        src="/hero.jpg" 
         alt="Oreoluwa Venture"
         layout="fill"
         objectFit="cover"
