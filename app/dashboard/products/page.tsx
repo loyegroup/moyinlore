@@ -43,6 +43,7 @@ export default function ProductPage() {
 
     const res = await fetch(`/api/products/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
 
     if (res.ok) {

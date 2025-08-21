@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import UploadButton from '@/components/UploadButton';
 import Image from 'next/image';
+import { useParams } from 'next/navigation';
 
 export default function EditProductPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const id = searchParams.get('id');
+  const params = useParams();
+  const id = params.id as string;
 
   const [form, setForm] = useState({
     name: '',
