@@ -6,7 +6,7 @@ import AppProviders from '@/app/AppProviders';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'My Inventory App',
+  title: 'Moyinlore Venture',
   description: 'Track your products',
 };
 
